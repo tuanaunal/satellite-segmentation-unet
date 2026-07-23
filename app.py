@@ -28,7 +28,7 @@ def load_dataset(root, img_size=(128, 128)):
             mask_path = os.path.join(mask_dir, os.path.splitext(f)[0] + ".png") # maskeye karsilik gelen dosya yolu
             if not os.path.exists(mask_path): continue # maske yoksa atla
 
-            # goruntuyu oku ve rgbye mevir
+            # goruntuyu oku ve rgbye cevir
             img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB)
             img = cv2.resize(img, img_size) / 255.0 # gorutunyu yeniden boyutlandir ve normalize et
 
@@ -40,7 +40,7 @@ def load_dataset(root, img_size=(128, 128)):
             images.append(img)
             masks.append(mask)
 
-    return np.array(images, dtype="float32"), np.array(masks, dtype="float32") # numpy dizisine mevir
+    return np.array(images, dtype="float32"), np.array(masks, dtype="float32") # numpy dizisine cevir
 
 X, y = load_dataset("aerial_dataset", img_size=(128, 128))
 print(f"Toplam ornek: {len(X)}") # toplam veri sayisi
@@ -77,22 +77,22 @@ def unet_model(input_size = (128, 128, 3)):
 
     # decoder: up sampling ve skip connection
     u6 = layers.Conv2DTranspose(128, 2, strides = (2,2), padding = "same")(c5) # up sample 8x8 -> 16x16
-    u6 = layers.concatenate([u6, c4])(u6)
+    u6 = layers.concatenate([u6, c4]) # concatenate duzeltildi
     c6 = layers.Conv2D(128, 3, activation = "relu", padding = "same")(u6)
     c6 = layers.Conv2D(128, 3, activation = "relu", padding = "same")(c6)
 
     u7 = layers.Conv2DTranspose(64, 2, strides = (2,2), padding = "same")(c6) # 16 -> 32
-    u7 = layers.concatenate([u7, c3])(u7)
+    u7 = layers.concatenate([u7, c3]) # concatenate duzeltildi
     c7 = layers.Conv2D(64, 3, activation = "relu", padding = "same")(u7)
     c7 = layers.Conv2D(64, 3, activation = "relu", padding = "same")(c7)
 
     u8 = layers.Conv2DTranspose(32, 2, strides = (2,2), padding = "same")(c7) # 32 -> 64
-    u8 = layers.concatenate([u8, c2])(u8)
+    u8 = layers.concatenate([u8, c2]) # concatenate duzeltildi
     c8 = layers.Conv2D(32, 3, activation = "relu", padding = "same")(u8)
     c8 = layers.Conv2D(32, 3, activation = "relu", padding = "same")(c8)
 
     u9 = layers.Conv2DTranspose(16, 2, strides = (2,2), padding = "same")(c8)
-    u9 = layers.concatenate([u9, c1])(u9)
+    u9 = layers.concatenate([u9, c1]) # concatenate duzeltildi
     c9 = layers.Conv2D(16, 3, activation = "relu", padding = "same")(u9)
     c9 = layers.Conv2D(16, 3, activation = "relu", padding = "same")(c9)
 
@@ -101,6 +101,22 @@ def unet_model(input_size = (128, 128, 3)):
     return keras.Model(inputs, outputs)
 
 # egitim asamasi
+unet_model = unet_model()
+unet_model.compile(optimizer="adam", loss = "binary_crossentropy", metrics=["accuracy"])
 
+# callbacks
+callbacks = [
+    keras.callbacks.ModelCheckpoint("model_best.h5", save_best_only = True), # en iyi modeli kaydet
+    keras.callbacks.ReduceLROnPlateau(), # dogrulama kaybi dusmez ise learning rate i azalt
+    keras.callbacks.EarlyStopping(patience = 10, restore_best_weights = True) # 10 epoch boyunca iyilesmez ise durdur (s harfi eklendi)
+]
+
+history = unet_model.fit(
+    X_train, y_train,
+    validation_data = (X_val, y_val), # dogrulama verisi
+    epochs = 10,
+    batch_size = 16,
+    callbacks = callbacks
+)
 
 # sonuclarin degerlendirilmesi
