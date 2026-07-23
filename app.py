@@ -120,3 +120,35 @@ history = unet_model.fit(
 )
 
 # sonuclarin degerlendirilmesi
+plt.plot(history.history["loss"], label = "train_loss") # egitim kaybi
+plt.plot(history.history["val_loss"], label = "val_loss") # dogrulama kaybi
+plt.legend()
+plt.show()
+
+def show_prediction(idx = 0):
+    img = X_val[idx]
+    mask_true = y_val[idx].squeeze() # gercek maske
+    pred_raw = unet_model.predict(img[None, ...])[0].squeeze() # modelden tahmini al ve kanali sikistir
+    mask_pred = (pred_raw > 0.5).astype("float32") # 0.5 esik megeri ile 2 li maske olustur
+
+    # sonuclari gorsellestir
+    plt.figure(figsize = (10,4))
+    plt.subplot(1, 3, 1)
+    plt.imshow(img)
+    plt.title("Input")
+    plt.axis("off")
+
+    plt.subplot(1, 3, 2)
+    plt.imshow(mask_true, cmap="gray")
+    plt.title("Ground Truth")
+    plt.axis("off")
+
+    plt.subplot(1, 3, 3)
+    plt.imshow(pred_raw, cmap="gray")
+    plt.title("Prediction")
+    plt.axis("off")
+
+    plt.tight_layout()
+    plt.show()
+
+show_prediction(4)
